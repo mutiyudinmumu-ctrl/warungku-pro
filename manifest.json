@@ -1,0 +1,9 @@
+{
+  "name": "WarungKu Pro",
+  "short_name": "WarungKu",
+  "description": "Aplikasi kasir dan stok warung serta toko bangunan",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f4f7f4",
+  "theme_color": "#14532d"
+}

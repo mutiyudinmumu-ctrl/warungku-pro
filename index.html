@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#14532d">
+  <title>WarungKu Pro</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    :root { font-family: system-ui, Arial, sans-serif; color: #17211b; background: #f4f7f4; }
+    body { margin: 0; }
+    header { background: #14532d; color: white; padding: 20px 16px; }
+    header h1 { margin: 0 0 4px; font-size: 1.5rem; }
+    header p { margin: 0; opacity: .9; }
+    main { max-width: 900px; margin: 0 auto; padding: 16px; }
+    .notice { background: #fff7d6; border: 1px solid #ead58a; padding: 12px; border-radius: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(250px,1fr)); gap: 14px; }
+    section { background: white; padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px #0000000b; }
+    h2 { margin-top: 0; font-size: 1.1rem; }
+    label { display: block; font-size: .9rem; margin: 10px 0 5px; }
+    input, select, button { box-sizing: border-box; width: 100%; padding: 11px; border-radius: 8px; border: 1px solid #cbd5ce; font: inherit; }
+    button { background: #166534; color: white; border: 0; margin-top: 10px; cursor: pointer; font-weight: 650; }
+    button.secondary { background: #e5eee7; color: #14532d; }
+    .muted { color: #58665d; font-size: .9rem; }
+    .stat { font-size: 1.5rem; font-weight: 750; }
+    ul { padding-left: 20px; }
+    li { margin: 8px 0; overflow-wrap: anywhere; }
+    footer { text-align: center; color: #66736a; font-size: .85rem; padding: 22px; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>WarungKu Pro</h1>
+  <p>Starter aplikasi kasir warung sembako & toko bangunan</p>
+</header>
+<main>
+  <p class="notice"><strong>Mode demo offline:</strong> data disimpan di perangkat/browser ini. Belum tersinkron ke cabang lain dan belum untuk transaksi usaha sungguhan.</p>
+  <div class="grid">
+    <section>
+      <h2>Tambah barang</h2>
+      <label for="nama">Nama barang</label><input id="nama" placeholder="Contoh: Beras 5 kg">
+      <label for="kategori">Kategori</label>
+      <select id="kategori"><option>Warung sembako</option><option>Toko bangunan</option></select>
+      <label for="satuan">Satuan</label><input id="satuan" placeholder="pcs, kg, sak, batang">
+      <label for="modal">Harga modal (Rp)</label><input id="modal" type="number" min="0" placeholder="50000">
+      <label for="jual">Harga jual (Rp)</label><input id="jual" type="number" min="0" placeholder="60000">
+      <label for="stok">Stok awal</label><input id="stok" type="number" min="0" step="0.01" placeholder="10">
+      <button id="tambah">Simpan barang</button>
+    </section>
+    <section>
+      <h2>Ringkasan lokal</h2>
+      <div class="muted">Jumlah jenis barang</div><div class="stat" id="jumlahBarang">0</div>
+      <div class="muted">Total stok (jumlah satuan)</div><div class="stat" id="jumlahStok">0</div>
+      <p class="muted">Ringkasan ini hanya dari data perangkat ini.</p>
+      <button class="secondary" id="ekspor">Unduh cadangan data (JSON)</button>
+      <button class="secondary" id="cetak">Cetak halaman / simpan PDF</button>
+    </section>
+    <section>
+      <h2>Daftar barang</h2>
+      <ul id="daftar"><li class="muted">Belum ada barang. Tambahkan barang pertama.</li></ul>
+    </section>
+  </div>
+</main>
+<footer>WarungKu Pro • Tahap 1: kerangka aplikasi offline</footer>
+<script>
+const KEY = "warungku-pro-products-v1";
+const $ = (id) => document.getElementById(id);
+let products = [];
+try { products = JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { products = []; }
+
+function rupiah(n) {
+  return new Intl.NumberFormat("id-ID", {style:"currency", currency:"IDR", maximumFractionDigits:0}).format(Number(n)||0);
+}
+function save() { localStorage.setItem(KEY, JSON.stringify(products)); render(); }
+function render() {
+  $("jumlahBarang").textContent = products.length;
+  $("jumlahStok").textContent = products.reduce((sum,p)=>sum+(Number(p.stok)||0),0).toLocaleString("id-ID");
+  const list = $("daftar");
+  list.innerHTML = "";
+  if (!products.length) {
+    const li = document.createElement("li"); li.className = "muted"; li.textContent = "Belum ada barang."; list.appendChild(li); return;
+  }
+  products.forEach((p, i) => {
+    const li = document.createElement("li");
+    li.textContent = `${p.nama} — ${p.kategori} — stok ${p.stok} ${p.satuan} — modal ${rupiah(p.modal)} — jual ${rupiah(p.jual)}`;
+    const del = document.createElement("button");
+    del.textContent = "Hapus"; del.className = "secondary";
+    del.onclick = () => { if(confirm(`Hapus ${p.nama}?`)) { products.splice(i,1); save(); } };
+    li.appendChild(del); list.appendChild(li);
+  });
+}
+$("tambah").addEventListener("click", () => {
+  const nama = $("nama").value.trim(), satuan = $("satuan").value.trim();
+  const modal = Number($("modal").value), jual = Number($("jual").value), stok = Number($("stok").value);
+  if (!nama || !satuan || $("modal").value === "" || $("jual").value === "" || $("stok").value === "" || modal < 0 || jual < 0 || stok < 0) {
+    alert("Lengkapi nama, satuan, harga modal, harga jual, dan stok dengan benar."); return;
+  }
+  products.push({id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())), nama, kategori:$("kategori").value, satuan, modal, jual, stok, dibuat:new Date().toISOString()});
+  save();
+  ["nama","satuan","modal","jual","stok"].forEach(id => $(id).value = "");
+  $("nama").focus();
+});
+$("ekspor").addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify({app:"WarungKu Pro",version:1,exportedAt:new Date().toISOString(),products},null,2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob), a = document.createElement("a");
+  a.href = url; a.download = "warungku-pro-cadangan.json"; a.click(); URL.revokeObjectURL(url);
+});
+$("cetak").addEventListener("click", () => window.print());
+render();
+
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(console.error));
+}
+</script>
+</body>
+</html>
